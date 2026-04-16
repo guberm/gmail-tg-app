@@ -152,9 +152,14 @@ export default function Home() {
              ))}
           </div>
         ) : emails.length === 0 ? (
-          <div className="flex-center" style={{ height: '200px', flexDirection: 'column', color: 'var(--text-secondary)' }}>
-            <Inbox size={48} opacity={0.5} style={{ marginBottom: '16px' }} />
-            <p>No messages found</p>
+          <div className="flex-center" style={{ height: '200px', flexDirection: 'column', gap: '12px', color: 'var(--text-secondary)' }}>
+            <Inbox size={48} opacity={0.5} />
+            <p style={{ margin: 0 }}>{search ? 'No results' : 'No messages found'}</p>
+            {!search && (
+              <button className="btn btn-secondary" style={{ fontSize: '13px', padding: '6px 14px' }} onClick={handleRefresh}>
+                Retry
+              </button>
+            )}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

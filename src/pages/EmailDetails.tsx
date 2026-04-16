@@ -14,6 +14,7 @@ export default function EmailDetails() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [allLabels, setAllLabels] = useState<GmailLabel[]>([]);
   const [showLabelMenu, setShowLabelMenu] = useState(false);
+  const [labelSearch, setLabelSearch] = useState('');
   const [isAutoFit, setIsAutoFit] = useState(true);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -219,30 +220,47 @@ export default function EmailDetails() {
           <div style={{ position: 'relative' }}>
             <span 
               style={{ background: 'rgba(51, 144, 236, 0.1)', color: 'var(--tg-blue)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }} 
-              onClick={() => setShowLabelMenu(!showLabelMenu)}
+              onClick={() => { setShowLabelMenu(!showLabelMenu); setLabelSearch(''); }}
             >
               <Tag size={12} /> Add Label
             </span>
             {showLabelMenu && (
-              <div className="glass-panel" style={{ position: 'absolute', top: '100%', left: 0, marginTop: '8px', zIndex: 20, maxHeight: '250px', overflowY: 'auto', borderRadius: 'var(--radius-md)', minWidth: '160px', boxShadow: 'var(--shadow-lg)' }}>
-                {allLabels.filter(l => !email.labels.includes(l.id) && l.type === 'user').map(l => (
-                  <div 
-                    key={l.id} 
-                    style={{ padding: '10px 12px', fontSize: '13px', cursor: 'pointer', borderBottom: '1px solid var(--glass-border)' }} 
-                    onClick={() => { handleToggleLabel(l.id, false); setShowLabelMenu(false); }}
-                  >
-                    {l.name}
-                  </div>
-                ))}
-                {allLabels.filter(l => !email.labels.includes(l.id) && l.type === 'system').map(l => (
-                  <div 
-                    key={l.id} 
-                    style={{ padding: '10px 12px', fontSize: '13px', cursor: 'pointer', borderBottom: '1px solid var(--glass-border)', color: 'var(--text-secondary)' }} 
-                    onClick={() => { handleToggleLabel(l.id, false); setShowLabelMenu(false); }}
-                  >
-                    {l.name}
-                  </div>
-                ))}
+              <div className="glass-panel" style={{ position: 'absolute', top: '100%', left: 0, marginTop: '8px', zIndex: 20, borderRadius: 'var(--radius-md)', minWidth: '180px', boxShadow: 'var(--shadow-lg)', overflow: 'hidden' }}>
+                <div style={{ padding: '8px', borderBottom: '1px solid var(--glass-border)' }}>
+                  <input
+                    autoFocus
+                    className="input"
+                    placeholder="Search labels..."
+                    value={labelSearch}
+                    onChange={e => setLabelSearch(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    style={{ padding: '6px 10px', fontSize: '13px', borderRadius: 'var(--radius-sm)', height: '32px' }}
+                  />
+                </div>
+                <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
+                  {allLabels
+                    .filter(l => !email.labels.includes(l.id) && l.type === 'user' && l.name.toLowerCase().includes(labelSearch.toLowerCase()))
+                    .map(l => (
+                      <div
+                        key={l.id}
+                        style={{ padding: '10px 12px', fontSize: '13px', cursor: 'pointer', borderBottom: '1px solid var(--glass-border)' }}
+                        onClick={() => { handleToggleLabel(l.id, false); setShowLabelMenu(false); setLabelSearch(''); }}
+                      >
+                        {l.name}
+                      </div>
+                    ))}
+                  {allLabels
+                    .filter(l => !email.labels.includes(l.id) && l.type === 'system' && l.name.toLowerCase().includes(labelSearch.toLowerCase()))
+                    .map(l => (
+                      <div
+                        key={l.id}
+                        style={{ padding: '10px 12px', fontSize: '13px', cursor: 'pointer', borderBottom: '1px solid var(--glass-border)', color: 'var(--text-secondary)' }}
+                        onClick={() => { handleToggleLabel(l.id, false); setShowLabelMenu(false); setLabelSearch(''); }}
+                      >
+                        {l.name}
+                      </div>
+                    ))}
+                </div>
               </div>
             )}
           </div>
