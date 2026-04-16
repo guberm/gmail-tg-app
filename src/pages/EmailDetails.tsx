@@ -17,6 +17,19 @@ export default function EmailDetails() {
   const [labelSearch, setLabelSearch] = useState('');
   const [isAutoFit, setIsAutoFit] = useState(true);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const labelMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showLabelMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (labelMenuRef.current && !labelMenuRef.current.contains(e.target as Node)) {
+        setShowLabelMenu(false);
+        setLabelSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showLabelMenu]);
 
   useEffect(() => {
     if (!id || !accessToken) return;
@@ -217,8 +230,8 @@ export default function EmailDetails() {
               </span>
             );
           })}
-          <div style={{ position: 'relative' }}>
-            <span 
+          <div ref={labelMenuRef} style={{ position: 'relative' }}>
+            <span
               style={{ background: 'rgba(51, 144, 236, 0.1)', color: 'var(--tg-blue)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }} 
               onClick={() => { setShowLabelMenu(!showLabelMenu); setLabelSearch(''); }}
             >
