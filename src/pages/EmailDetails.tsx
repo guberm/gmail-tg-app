@@ -42,6 +42,10 @@ export default function EmailDetails() {
       setEmail(data);
       setAllLabels(labelsData);
       setLoading(false);
+      // Mark as read silently if unread
+      if (data?.unread) {
+        modifyMessageLabels(accessToken, id, [], ['UNREAD']).catch(() => {});
+      }
     };
     loadEmail();
   }, [id, accessToken]);

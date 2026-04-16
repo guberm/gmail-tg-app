@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { fetchEmails, fetchLatestMessageId, getUnreadCount, modifyMessageLabels } from '../api/gmail';
+import { fetchEmails, fetchLatestMessageId, getUnreadCount, modifyMessageLabels, trashEmail } from '../api/gmail';
 import type { EmailMessage } from '../api/gmail';
 import { useNavigate } from 'react-router-dom';
-import { Search, Edit3, LogOut, Inbox, Send, FileText, Star, RefreshCw } from 'lucide-react';
+import { Search, Edit3, LogOut, Inbox, Send, FileText, Star, RefreshCw, Trash2, MailOpen, Mail } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function Home() {
@@ -16,6 +16,9 @@ export default function Home() {
   const [queryTimeout, setQueryTimeout] = useState<any>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ email: EmailMessage; x: number; y: number } | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggered = useRef(false);
   const latestIdRef = useRef<string | null>(null);
   const POLL_INTERVAL = 30_000;
 
@@ -95,9 +98,61 @@ export default function Home() {
         currentStarred ? ['STARRED'] : []
       );
     } catch (err) {
-      setEmails(currentEmails => currentEmails.map(email => 
+      setEmails(currentEmails => currentEmails.map(email =>
         email.id === emailId ? { ...email, starred: currentStarred } : email
       ));
+    }
+  };
+
+  const startLongPress = (e: React.TouchEvent | React.MouseEvent, email: EmailMessage) => {
+    longPressTriggered.current = false;
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true;
+      setContextMenu({ email, x: clientX, y: clientY });
+    }, 500);
+  };
+
+  const cancelLongPress = () => {
+    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+  };
+
+  const handleEmailClick = (emailId: string) => {
+    if (longPressTriggered.current) { longPressTriggered.current = false; return; }
+    navigate(`/email/${emailId}`);
+  };
+
+  const handleContextMarkReadToggle = async (email: EmailMessage) => {
+    if (!accessToken) return;
+    setContextMenu(null);
+    setEmails(curr => curr.map(e => e.id === email.id ? { ...e, unread: !email.unread } : e));
+    try {
+      await modifyMessageLabels(accessToken, email.id, email.unread ? [] : ['UNREAD'], email.unread ? ['UNREAD'] : []);
+    } catch {
+      setEmails(curr => curr.map(e => e.id === email.id ? { ...e, unread: email.unread } : e));
+    }
+  };
+
+  const handleContextStarToggle = async (email: EmailMessage) => {
+    if (!accessToken) return;
+    setContextMenu(null);
+    setEmails(curr => curr.map(e => e.id === email.id ? { ...e, starred: !email.starred } : e));
+    try {
+      await modifyMessageLabels(accessToken, email.id, email.starred ? [] : ['STARRED'], email.starred ? ['STARRED'] : []);
+    } catch {
+      setEmails(curr => curr.map(e => e.id === email.id ? { ...e, starred: email.starred } : e));
+    }
+  };
+
+  const handleContextDelete = async (email: EmailMessage) => {
+    if (!accessToken) return;
+    setContextMenu(null);
+    setEmails(curr => curr.filter(e => e.id !== email.id));
+    try {
+      await trashEmail(accessToken, email.id);
+    } catch {
+      setEmails(curr => [email, ...curr]);
     }
   };
 
@@ -164,10 +219,16 @@ export default function Home() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             {emails.map((email) => (
-              <div 
+              <div
                 key={email.id}
                 className="animate-fade-in"
-                onClick={() => navigate(`/email/${email.id}`)}
+                onClick={() => handleEmailClick(email.id)}
+                onTouchStart={(e) => startLongPress(e, email)}
+                onTouchEnd={cancelLongPress}
+                onTouchMove={cancelLongPress}
+                onMouseDown={(e) => { if (e.button === 0) startLongPress(e, email); }}
+                onMouseUp={cancelLongPress}
+                onContextMenu={(e) => { e.preventDefault(); setContextMenu({ email, x: e.clientX, y: e.clientY }); }}
                 style={{
                   display: 'flex',
                   padding: '12px 8px',
@@ -175,7 +236,9 @@ export default function Home() {
                   borderRadius: 'var(--radius-md)',
                   transition: 'background 0.2s',
                   background: email.unread ? 'rgba(51, 144, 236, 0.05)' : 'transparent',
-                  borderLeft: email.unread ? '3px solid var(--tg-blue)' : '3px solid transparent'
+                  borderLeft: email.unread ? '3px solid var(--tg-blue)' : '3px solid transparent',
+                  userSelect: 'none',
+                  WebkitUserSelect: 'none',
                 }}
                 onMouseOver={(e) => Object.assign(e.currentTarget.style, { background: 'var(--bg-secondary)' })}
                 onMouseOut={(e) => Object.assign(e.currentTarget.style, { background: email.unread ? 'rgba(51, 144, 236, 0.05)' : 'transparent' })}
@@ -224,7 +287,7 @@ export default function Home() {
       </div>
 
       {/* Floating Action Button */}
-      <button 
+      <button
         className="btn-primary flex-center"
         onClick={() => navigate('/compose')}
         style={{
@@ -239,6 +302,63 @@ export default function Home() {
       >
         <Edit3 size={24} color="white" />
       </button>
+
+      {/* Long-press context menu */}
+      {contextMenu && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 50 }}
+          onClick={() => setContextMenu(null)}
+          onTouchStart={() => setContextMenu(null)}
+        >
+          <div
+            className="glass-panel"
+            onClick={e => e.stopPropagation()}
+            onTouchStart={e => e.stopPropagation()}
+            style={{
+              position: 'absolute',
+              top: Math.min(contextMenu.y, window.innerHeight - 180),
+              left: Math.min(contextMenu.x, window.innerWidth - 200),
+              zIndex: 51,
+              minWidth: '190px',
+              borderRadius: 'var(--radius-md)',
+              boxShadow: 'var(--shadow-lg)',
+              overflow: 'hidden',
+            }}
+          >
+            {[
+              {
+                icon: contextMenu.email.unread ? <MailOpen size={16} /> : <Mail size={16} />,
+                label: contextMenu.email.unread ? 'Mark as read' : 'Mark as unread',
+                action: () => handleContextMarkReadToggle(contextMenu.email),
+              },
+              {
+                icon: <Star size={16} fill={contextMenu.email.starred ? 'var(--accent-yellow)' : 'none'} color={contextMenu.email.starred ? 'var(--accent-yellow)' : 'currentColor'} />,
+                label: contextMenu.email.starred ? 'Unstar' : 'Star',
+                action: () => handleContextStarToggle(contextMenu.email),
+              },
+              {
+                icon: <Trash2 size={16} color="var(--accent-red, #ef4444)" />,
+                label: 'Delete',
+                action: () => handleContextDelete(contextMenu.email),
+                danger: true,
+              },
+            ].map(({ icon, label, action, danger }) => (
+              <div
+                key={label}
+                onClick={action}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '12px 16px', fontSize: '14px', cursor: 'pointer',
+                  borderBottom: '1px solid var(--glass-border)',
+                  color: danger ? 'var(--accent-red, #ef4444)' : 'var(--text-primary)',
+                }}
+              >
+                {icon} {label}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
