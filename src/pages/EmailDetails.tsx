@@ -52,9 +52,19 @@ export default function EmailDetails() {
                   border-radius: 12px;
                   line-height: 1.5;
                   word-break: break-word;
+                  overflow-x: hidden;
                 }
                 a { color: #3390ec; }
-                img { max-width: 100%; height: auto; }
+                
+                /* Force responsive emails */
+                table, thead, tbody, tr, th, td, div, figure {
+                  max-width: 100% !important;
+                }
+                img { 
+                  max-width: 100% !important; 
+                  height: auto !important; 
+                }
+                
                 /* Dark mode media query for emails that support it */
                 @media (prefers-color-scheme: dark) {
                   body {
