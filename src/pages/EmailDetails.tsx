@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchFullEmail, trashEmail, fetchLabels, modifyMessageLabels } from '../api/gmail';
 import type { EmailDetail, GmailLabel } from '../api/gmail';
-import { ArrowLeft, Trash2, Reply, MoreVertical, Loader2, X, Tag, Star } from 'lucide-react';
+import { ArrowLeft, Trash2, Reply, MoreVertical, Loader2, X, Tag, Star, Maximize2, Minimize2 } from 'lucide-react';
 
 export default function EmailDetails() {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +14,7 @@ export default function EmailDetails() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [allLabels, setAllLabels] = useState<GmailLabel[]>([]);
   const [showLabelMenu, setShowLabelMenu] = useState(false);
+  const [isAutoFit, setIsAutoFit] = useState(true);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -52,18 +53,9 @@ export default function EmailDetails() {
                   border-radius: 12px;
                   line-height: 1.5;
                   word-break: break-word;
-                  overflow-x: hidden;
                 }
                 a { color: #3390ec; }
-                
-                /* Force responsive emails */
-                table, thead, tbody, tr, th, td, div, figure {
-                  max-width: 100% !important;
-                }
-                img { 
-                  max-width: 100% !important; 
-                  height: auto !important; 
-                }
+                img { max-width: 100%; height: auto; }
                 
                 /* Dark mode media query for emails that support it */
                 @media (prefers-color-scheme: dark) {
@@ -79,15 +71,29 @@ export default function EmailDetails() {
         `);
         doc.close();
         
-        // Auto resize iframe height
+        // Auto resize iframe height and intelligently scale width
         setTimeout(() => {
           if (iframeRef.current && iframeRef.current.contentWindow) {
-            iframeRef.current.style.height = `${iframeRef.current.contentWindow.document.body.scrollHeight + 32}px`;
+            const iframeDoc = iframeRef.current.contentWindow.document;
+            iframeDoc.documentElement.style.zoom = '1';
+            
+            const iWidth = iframeRef.current.clientWidth;
+            const cWidth = iframeDoc.body.scrollWidth;
+            
+            if (isAutoFit && cWidth > iWidth && iWidth > 0) {
+              iframeDoc.documentElement.style.zoom = (iWidth / cWidth).toString();
+            }
+            
+            setTimeout(() => {
+              if (iframeRef.current && iframeRef.current.contentWindow) {
+                iframeRef.current.style.height = `${iframeRef.current.contentWindow.document.documentElement.scrollHeight + 32}px`;
+              }
+            }, 50);
           }
         }, 500);
       }
     }
-  }, [email]);
+  }, [email, isAutoFit]);
 
   const handleToggleLabel = async (labelId: string, remove: boolean) => {
     if (!id || !accessToken || !email) return;
@@ -244,12 +250,26 @@ export default function EmailDetails() {
 
         <div className="email-body-container" style={{ margin: '0 -16px', padding: '0 16px' }}>
           {email.htmlText ? (
-            <iframe 
-              ref={iframeRef}
-              title="email content"
-              style={{ width: '100%', border: 'none', minHeight: '300px', borderRadius: '8px', background: '#fff' }}
-              sandbox="allow-same-origin allow-popups"
-            />
+            <>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ fontSize: '13px', padding: '6px 12px', display: 'flex', gap: '6px', alignItems: 'center', borderRadius: 'var(--radius-full)' }}
+                  onClick={() => setIsAutoFit(!isAutoFit)}
+                >
+                  {isAutoFit ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
+                  {isAutoFit ? 'Original Size' : 'Fit to Screen'}
+                </button>
+              </div>
+              <div style={{ width: '100%', overflowX: 'auto', borderRadius: '8px', background: '#fff' }}>
+                <iframe 
+                  ref={iframeRef}
+                  title="email content"
+                  style={{ width: '100%', border: 'none', minHeight: '300px', display: 'block' }}
+                  sandbox="allow-same-origin allow-popups"
+                />
+              </div>
+            </>
           ) : (
             <div className="email-body-content" style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
               {email.plainText || email.snippet}
