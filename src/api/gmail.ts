@@ -223,6 +223,23 @@ export async function getUnreadCount(token: string): Promise<number> {
   }
 }
 
+export async function fetchLatestMessageId(token: string, folder = 'INBOX', query = ''): Promise<string | null> {
+  try {
+    let q = '';
+    if (folder === 'INBOX') q += 'in:inbox ';
+    if (folder === 'SENT') q += 'in:sent ';
+    if (folder === 'DRAFT') q += 'in:draft ';
+    if (query) q += query;
+    const url = `${GMAIL_API_BASE}/messages?maxResults=1&q=${encodeURIComponent(q.trim())}`;
+    const response = await fetch(url, { headers: getHeaders(token) });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.messages?.[0]?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchLabels(token: string): Promise<GmailLabel[]> {
   try {
     const response = await fetch(`${GMAIL_API_BASE}/labels`, { headers: getHeaders(token) });

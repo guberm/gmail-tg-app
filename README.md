@@ -9,6 +9,9 @@ A sleek, robust Telegram Mini App built with React & Vite that seamlessly functi
 - 📤 **Compose & Reply**: Draft entirely new emails or reply with full threaded support.
 - 🗑️ **Telegram Native Integration**: Leverages native Telegram Confirm buttons for high-risk actions (like deleting/trashing).
 - 🏷️ **Label Management**: Edit your personalized Google Account labels instantly!
+- ⭐ **Star emails**: Toggle starred/unstarred directly from the email list.
+- 🔄 **Manual refresh**: Tap the refresh button in the header to reload your inbox on demand.
+- 🔔 **Auto-refresh**: Background polling every 30 seconds — new emails appear automatically without any interaction.
 - 🎨 **Dynamic Dark Mode UI**: Crafted around the Telegram premium aesthetic featuring custom HSL colors and `glassmorphism`.
 
 ## 🚀 Getting Started

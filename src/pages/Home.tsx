@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { fetchEmails, getUnreadCount, modifyMessageLabels } from '../api/gmail';
+import { fetchEmails, fetchLatestMessageId, getUnreadCount, modifyMessageLabels } from '../api/gmail';
 import type { EmailMessage } from '../api/gmail';
 import { useNavigate } from 'react-router-dom';
-import { Search, Edit3, LogOut, Inbox, Send, FileText, Star } from 'lucide-react';
+import { Search, Edit3, LogOut, Inbox, Send, FileText, Star, RefreshCw } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function Home() {
@@ -15,25 +15,50 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [queryTimeout, setQueryTimeout] = useState<any>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const latestIdRef = useRef<string | null>(null);
+  const POLL_INTERVAL = 30_000;
 
-  const loadEmails = async (searchQuery = '') => {
+  const loadEmails = useCallback(async (searchQuery = '', silent = false) => {
     if (!accessToken) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     const msgs = await fetchEmails(accessToken, folder, 20, searchQuery);
     setEmails(msgs);
-    setLoading(false);
-  };
+    if (msgs.length > 0) latestIdRef.current = msgs[0].id;
+    if (!silent) setLoading(false);
+  }, [accessToken, folder]);
 
-  const loadUnread = async () => {
+  const loadUnread = useCallback(async () => {
     if (!accessToken) return;
     const count = await getUnreadCount(accessToken);
     setUnreadCount(count);
+  }, [accessToken]);
+
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    await Promise.all([loadEmails(search), loadUnread()]);
+    setRefreshing(false);
   };
 
   useEffect(() => {
     loadEmails(search);
     loadUnread();
   }, [folder, accessToken]);
+
+  // Background poll: cheaply check latest ID, full refresh only if changed
+  useEffect(() => {
+    if (!accessToken) return;
+    const interval = setInterval(async () => {
+      const latestId = await fetchLatestMessageId(accessToken, folder, search);
+      if (latestId && latestId !== latestIdRef.current) {
+        await Promise.all([loadEmails(search, true), loadUnread()]);
+      } else {
+        await loadUnread();
+      }
+    }, POLL_INTERVAL);
+    return () => clearInterval(interval);
+  }, [accessToken, folder, search, loadEmails, loadUnread]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -87,9 +112,14 @@ export default function Home() {
           <h1 style={{ fontSize: '18px', fontWeight: 600 }}>Inbox</h1>
           {unreadCount > 0 && <span className="badge badge-red">{unreadCount}</span>}
         </div>
-        <button className="btn-icon" onClick={logout} title="Logout">
-          <LogOut size={20} />
-        </button>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <button className="btn-icon" onClick={handleRefresh} title="Refresh" disabled={refreshing}>
+            <RefreshCw size={20} className={refreshing ? 'spin' : ''} style={{ opacity: refreshing ? 0.5 : 1 }} />
+          </button>
+          <button className="btn-icon" onClick={logout} title="Logout">
+            <LogOut size={20} />
+          </button>
+        </div>
       </header>
 
       {/* Search */}
