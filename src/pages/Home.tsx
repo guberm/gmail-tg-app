@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { fetchEmails, getUnreadCount } from '../api/gmail';
 import type { EmailMessage } from '../api/gmail';
 import { useNavigate } from 'react-router-dom';
-import { Search, Edit3, LogOut, Inbox, Send, FileText } from 'lucide-react';
+import { Search, Edit3, LogOut, Inbox, Send, FileText, Star } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function Home() {
@@ -134,9 +134,12 @@ export default function Home() {
                     >
                       {email.from}
                     </span>
-                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', flexShrink: 0, marginLeft: '8px' }}>
-                      {formatEmailDate(email.date)}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, marginLeft: '8px' }}>
+                      {email.starred && <Star size={14} fill="var(--accent-yellow)" color="var(--accent-yellow)" />}
+                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        {formatEmailDate(email.date)}
+                      </span>
+                    </div>
                   </div>
                   <div className="text-ellipsis" style={{ fontWeight: email.unread ? 500 : 400, fontSize: '14px', marginBottom: '2px' }}>
                     {email.subject}

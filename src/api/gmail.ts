@@ -12,6 +12,7 @@ export interface EmailMessage {
   from: string;
   date: string;
   unread: boolean;
+  starred: boolean;
   internalDate: string;
 }
 
@@ -84,6 +85,7 @@ async function fetchEmailSnippet(token: string, id: string): Promise<EmailMessag
       from: from,
       date: getHeader('Date'),
       unread: data.labelIds?.includes('UNREAD') || false,
+      starred: data.labelIds?.includes('STARRED') || false,
       internalDate: data.internalDate
     };
   } catch (e) {
