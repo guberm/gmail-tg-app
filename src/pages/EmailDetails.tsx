@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchFullEmail, trashEmail, fetchLabels, modifyMessageLabels } from '../api/gmail';
 import type { EmailDetail, GmailLabel } from '../api/gmail';
-import { ArrowLeft, Trash2, Reply, MoreVertical, Loader2, X, Tag } from 'lucide-react';
+import { ArrowLeft, Trash2, Reply, MoreVertical, Loader2, X, Tag, Star } from 'lucide-react';
 
 export default function EmailDetails() {
   const { id } = useParams<{ id: string }>();
@@ -147,7 +147,17 @@ export default function EmailDetails() {
         <button className="btn-icon" onClick={() => navigate('/')}>
           <ArrowLeft size={24} />
         </button>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <button 
+            className="btn-icon" 
+            onClick={() => handleToggleLabel('STARRED', email.labels.includes('STARRED'))}
+          >
+            <Star 
+              size={20} 
+              fill={email.labels.includes('STARRED') ? 'var(--accent-yellow)' : 'none'} 
+              color={email.labels.includes('STARRED') ? 'var(--accent-yellow)' : 'currentColor'} 
+            />
+          </button>
           <button className="btn-icon" onClick={handleDelete} disabled={isDeleting}>
             {isDeleting ? <Loader2 className="animate-spin" size={20} /> : <Trash2 size={20} />}
           </button>
