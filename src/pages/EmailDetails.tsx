@@ -77,6 +77,21 @@ export default function EmailDetails() {
             const iframeDoc = iframeRef.current.contentWindow.document;
             iframeDoc.documentElement.style.zoom = '1';
             
+            // Intercept link clicks to open in external browser
+            iframeDoc.addEventListener('click', (e) => {
+              const target = e.target as HTMLElement;
+              const anchor = target.closest('a');
+              if (anchor && anchor.href) {
+                e.preventDefault();
+                const tg = (window as any).Telegram?.WebApp;
+                if (tg && tg.openLink) {
+                  tg.openLink(anchor.href);
+                } else {
+                  window.open(anchor.href, '_blank', 'noopener,noreferrer');
+                }
+              }
+            });
+            
             const iWidth = iframeRef.current.clientWidth;
             const cWidth = iframeDoc.body.scrollWidth;
             
