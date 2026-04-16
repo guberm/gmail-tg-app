@@ -1,3 +1,9 @@
+export interface GmailLabel {
+  id: string;
+  name: string;
+  type: string;
+}
+
 export interface EmailMessage {
   id: string;
   threadId: string;
@@ -211,5 +217,32 @@ export async function getUnreadCount(token: string): Promise<number> {
     return data.messagesUnread || 0;
   } catch (e) {
     return 0;
+  }
+}
+
+export async function fetchLabels(token: string): Promise<GmailLabel[]> {
+  try {
+    const response = await fetch(`${GMAIL_API_BASE}/labels`, { headers: getHeaders(token) });
+    if (!response.ok) throw new Error('Failed to fetch labels');
+    const data = await response.json();
+    return data.labels || [];
+  } catch (error) {
+    console.error('Error fetching labels:', error);
+    return [];
+  }
+}
+
+export async function modifyMessageLabels(token: string, messageId: string, addLabelIds: string[], removeLabelIds: string[]) {
+  try {
+    const response = await fetch(`${GMAIL_API_BASE}/messages/${messageId}/modify`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify({ addLabelIds, removeLabelIds })
+    });
+    if (!response.ok) throw new Error('Failed to modify labels');
+    return await response.json();
+  } catch (error) {
+    console.error('Error modifying labels:', error);
+    throw error;
   }
 }

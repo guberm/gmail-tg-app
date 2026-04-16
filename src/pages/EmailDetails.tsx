@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { fetchFullEmail, trashEmail } from '../api/gmail';
-import type { EmailDetail } from '../api/gmail';
-import { ArrowLeft, Trash2, Reply, MoreVertical, Loader2 } from 'lucide-react';
+import { fetchFullEmail, trashEmail, fetchLabels, modifyMessageLabels } from '../api/gmail';
+import type { EmailDetail, GmailLabel } from '../api/gmail';
+import { ArrowLeft, Trash2, Reply, MoreVertical, Loader2, X, Tag } from 'lucide-react';
 
 export default function EmailDetails() {
   const { id } = useParams<{ id: string }>();
@@ -12,14 +12,20 @@ export default function EmailDetails() {
   const [email, setEmail] = useState<EmailDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [allLabels, setAllLabels] = useState<GmailLabel[]>([]);
+  const [showLabelMenu, setShowLabelMenu] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     if (!id || !accessToken) return;
     const loadEmail = async () => {
       setLoading(true);
-      const data = await fetchFullEmail(accessToken, id);
+      const [data, labelsData] = await Promise.all([
+        fetchFullEmail(accessToken, id),
+        fetchLabels(accessToken)
+      ]);
       setEmail(data);
+      setAllLabels(labelsData);
       setLoading(false);
     };
     loadEmail();
@@ -73,18 +79,48 @@ export default function EmailDetails() {
     }
   }, [email]);
 
+  const handleToggleLabel = async (labelId: string, remove: boolean) => {
+    if (!id || !accessToken || !email) return;
+    const newLabels = remove 
+      ? email.labels.filter(l => l !== labelId)
+      : [...email.labels, labelId];
+    
+    setEmail({ ...email, labels: newLabels });
+
+    try {
+      await modifyMessageLabels(
+        accessToken, 
+        id, 
+        remove ? [] : [labelId], 
+        remove ? [labelId] : []
+      );
+    } catch (err) {
+      setEmail(email);
+    }
+  };
+
   const handleDelete = async () => {
     if (!id || !accessToken) return;
-    if (window.confirm('Delete this email?')) {
+    const tg = (window as any).Telegram?.WebApp;
+    const execDelete = async () => {
       setIsDeleting(true);
       try {
         await trashEmail(accessToken, id);
         navigate('/');
       } catch (err) {
-        alert('Failed to delete email');
+        if (tg?.showAlert) tg.showAlert('Failed to delete email');
+        else alert('Failed to delete email');
       } finally {
         setIsDeleting(false);
       }
+    };
+
+    if (tg?.showConfirm) {
+      tg.showConfirm('Delete this email?', (ok: boolean) => {
+        if (ok) execDelete();
+      });
+    } else {
+      if (window.confirm('Delete this email?')) execDelete();
     }
   };
 
@@ -125,6 +161,51 @@ export default function EmailDetails() {
         <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px', lineHeight: 1.3 }}>
           {email.subject}
         </h2>
+        
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+          {email.labels.map(lId => {
+            const label = allLabels.find(l => l.id === lId);
+            if (!label) return null;
+            // Hide common system labels that clutter UI unless edited
+            if (label.name === 'UNREAD') return null;
+            return (
+              <span key={lId} style={{ background: 'var(--bg-tertiary)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {label.name}
+                <X size={14} style={{ cursor: 'pointer', opacity: 0.7 }} onClick={() => handleToggleLabel(lId, true)} />
+              </span>
+            );
+          })}
+          <div style={{ position: 'relative' }}>
+            <span 
+              style={{ background: 'rgba(51, 144, 236, 0.1)', color: 'var(--tg-blue)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }} 
+              onClick={() => setShowLabelMenu(!showLabelMenu)}
+            >
+              <Tag size={12} /> Add Label
+            </span>
+            {showLabelMenu && (
+              <div className="glass-panel" style={{ position: 'absolute', top: '100%', left: 0, marginTop: '8px', zIndex: 20, maxHeight: '250px', overflowY: 'auto', borderRadius: 'var(--radius-md)', minWidth: '160px', boxShadow: 'var(--shadow-lg)' }}>
+                {allLabels.filter(l => !email.labels.includes(l.id) && l.type === 'user').map(l => (
+                  <div 
+                    key={l.id} 
+                    style={{ padding: '10px 12px', fontSize: '13px', cursor: 'pointer', borderBottom: '1px solid var(--glass-border)' }} 
+                    onClick={() => { handleToggleLabel(l.id, false); setShowLabelMenu(false); }}
+                  >
+                    {l.name}
+                  </div>
+                ))}
+                {allLabels.filter(l => !email.labels.includes(l.id) && l.type === 'system').map(l => (
+                  <div 
+                    key={l.id} 
+                    style={{ padding: '10px 12px', fontSize: '13px', cursor: 'pointer', borderBottom: '1px solid var(--glass-border)', color: 'var(--text-secondary)' }} 
+                    onClick={() => { handleToggleLabel(l.id, false); setShowLabelMenu(false); }}
+                  >
+                    {l.name}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
         
         <div className="flex-between" style={{ marginBottom: '24px', alignItems: 'flex-start' }}>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
