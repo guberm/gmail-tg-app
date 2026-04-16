@@ -1,73 +1,51 @@
-# React + TypeScript + Vite
+# 📧 GMail for Telegram (Mini App)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A sleek, robust Telegram Mini App built with React & Vite that seamlessly functions as a fully operational Gmail client right within Telegram! Read, compose, search, delete, and fully organize labels on your emails without ever switching apps.
 
-Currently, two official plugins are available:
+## ✨ Features
+- 🔐 **Secure Google OAuth 2.0**: Effortlessly sign in directly leveraging `@react-oauth/google` implicit token flows.
+- 📥 **Inbox & Unread Badges**: Quickly flip between Inbox, Sent, and Drafts tabs.
+- 📖 **Embedded HTML Viewer**: Renders full rich-text styled HTML emails safely within an isolated iframe.
+- 📤 **Compose & Reply**: Draft entirely new emails or reply with full threaded support.
+- 🗑️ **Telegram Native Integration**: Leverages native Telegram Confirm buttons for high-risk actions (like deleting/trashing).
+- 🏷️ **Label Management**: Edit your personalized Google Account labels instantly!
+- 🎨 **Dynamic Dark Mode UI**: Crafted around the Telegram premium aesthetic featuring custom HSL colors and `glassmorphism`.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🚀 Getting Started
 
-## React Compiler
+### 1. Configure Google OAuth Credentials
+Before executing this natively, you will need to grant yourselves access via Google Cloud:
+1. Navigate to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Head to **APIs & Services -> OAuth consent screen**. Create an **External** configuration. (You won't need to actually publish it if it's for personal use! Just add your email as a Test User).
+3. Under **Credentials**, hit **Create Credentials** -> **OAuth Client ID**.
+4. Select **Web application**.
+5. Add your server link to **both** the "Authorized JavaScript origins" AND "Authorized redirect URIs" sections.
+    - Setup for local testing: `http://localhost:5173`
+    - Setup for production: *Insert your live URL (e.g., Vercel App Link)*
+6. Copy the uniquely generated `Client ID`.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 2. Configure Local Environment
+Clone the repository, and replace the placeholder variable in your environment:
+```bash
+cp .env.example .env
+```
+Inside your new `.env` file, paste your newly acquired `Client ID`:
+```env
+VITE_GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 3. Spin Up Development Server
+Run Vite's lightning fast HMR server to test things out:
+```bash
+npm install
+npm run dev
 ```
+
+### 4. Deploying to Telegram!
+Once you host your app natively on the internet (like simply linking this Repository to Vercel free-tier):
+1. Head to Telegram and talk to **@BotFather**.
+2. Run `/newbot` and follow the quick setup steps.
+3. Open Bot Settings -> **Menu Button** -> **Configure menu button**.
+4. Insert the live `https://` link of your natively hosted app!
+
+The app will now reliably deploy right over your Telegram Chat context whenever launched!
