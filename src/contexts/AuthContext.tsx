@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import type { ReactNode } from 'react';
 
 interface AuthContextType {
@@ -10,30 +10,23 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const getInitialToken = () => {
+  const hash = window.location.hash;
+  if (hash && hash.includes('access_token=')) {
+    const params = new URLSearchParams(hash.substring(1));
+    const token = params.get('access_token');
+    if (token) {
+      localStorage.setItem('gmail_access_token', token);
+      // Clean the URL hash immediately
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      return token;
+    }
+  }
+  return localStorage.getItem('gmail_access_token');
+};
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    // 1. Check if token is in URL hash (from Google redirect auth flow)
-    const hash = window.location.hash;
-    if (hash && hash.includes('access_token=')) {
-      const params = new URLSearchParams(hash.substring(1)); // remove '#'
-      const token = params.get('access_token');
-      if (token) {
-        setAccessToken(token);
-        localStorage.setItem('gmail_access_token', token);
-        // Clean the URL
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-        return;
-      }
-    }
-
-    // 2. Fallback to localStorage
-    const storedToken = localStorage.getItem('gmail_access_token');
-    if (storedToken) {
-      setAccessToken(storedToken);
-    }
-  }, []);
+  const [accessToken, setAccessToken] = useState<string | null>(getInitialToken);
 
   const login = (token: string) => {
     setAccessToken(token);
