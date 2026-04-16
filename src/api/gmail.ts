@@ -154,6 +154,7 @@ export async function fetchFullEmail(token: string, id: string): Promise<EmailDe
       from: getHeader('From'),
       date: getHeader('Date'),
       unread: data.labelIds?.includes('UNREAD') || false,
+      starred: data.labelIds?.includes('STARRED') || false,
       internalDate: data.internalDate,
       labels: data.labelIds || [],
       htmlText: html,
