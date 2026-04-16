@@ -1,11 +1,10 @@
-import { useGoogleLogin } from '@react-oauth/google';
 import { Mail, Shield, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useState, useEffect } from 'react';
 
 export default function Login() {
-  const { login, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
@@ -15,23 +14,17 @@ export default function Login() {
     }
   }, [isAuthenticated, navigate]);
 
-  const doLogin = useGoogleLogin({
-    onSuccess: (tokenResponse) => {
-      login(tokenResponse.access_token);
-      navigate('/');
-    },
-    onError: () => {
-      console.error('Login Failed');
-      setLoading(false);
-    },
-    onNonOAuthError: () => setLoading(false),
-    scope: 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.readonly',
-    ux_mode: 'redirect',
-  });
-
   const handleLoginClick = () => {
     setLoading(true);
-    doLogin();
+    
+    // Using manual full-page redirect to bypass all Telegram WebView popup limitations flawlessly
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com";
+    const redirectUri = window.location.origin;
+    const scope = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.readonly';
+    
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scope)}&prompt=consent`;
+    
+    window.location.href = authUrl;
   };
 
   return (
