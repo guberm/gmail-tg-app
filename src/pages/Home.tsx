@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { fetchEmails, getUnreadCount } from '../api/gmail';
+import { fetchEmails, getUnreadCount, modifyMessageLabels } from '../api/gmail';
 import type { EmailMessage } from '../api/gmail';
 import { useNavigate } from 'react-router-dom';
 import { Search, Edit3, LogOut, Inbox, Send, FileText, Star } from 'lucide-react';
@@ -50,6 +50,29 @@ export default function Home() {
       return formatDistanceToNow(date, { addSuffix: true });
     } catch {
       return dateStr.split(' ')[0] || '';
+    }
+  };
+
+  const handleToggleStar = async (e: React.MouseEvent, emailId: string, currentStarred: boolean) => {
+    e.stopPropagation();
+    if (!accessToken) return;
+
+    // Optimistic UI update
+    setEmails(currentEmails => currentEmails.map(email => 
+      email.id === emailId ? { ...email, starred: !currentStarred } : email
+    ));
+
+    try {
+      await modifyMessageLabels(
+        accessToken,
+        emailId,
+        !currentStarred ? ['STARRED'] : [],
+        currentStarred ? ['STARRED'] : []
+      );
+    } catch (err) {
+      setEmails(currentEmails => currentEmails.map(email => 
+        email.id === emailId ? { ...email, starred: currentStarred } : email
+      ));
     }
   };
 
@@ -134,8 +157,19 @@ export default function Home() {
                     >
                       {email.from}
                     </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, marginLeft: '8px' }}>
-                      {email.starred && <Star size={14} fill="var(--accent-yellow)" color="var(--accent-yellow)" />}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginLeft: '8px' }}>
+                      <button 
+                        className="btn-icon" 
+                        style={{ padding: '4px', margin: '-4px' }} 
+                        onClick={(e) => handleToggleStar(e, email.id, email.starred)}
+                      >
+                        <Star 
+                          size={16} 
+                          fill={email.starred ? 'var(--accent-yellow)' : 'none'} 
+                          color={email.starred ? 'var(--accent-yellow)' : 'var(--text-secondary)'} 
+                          style={{ opacity: email.starred ? 1 : 0.4 }}
+                        />
+                      </button>
                       <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                         {formatEmailDate(email.date)}
                       </span>
