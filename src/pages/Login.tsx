@@ -26,6 +26,7 @@ export default function Login() {
     },
     onNonOAuthError: () => setLoading(false),
     scope: 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.readonly',
+    ux_mode: 'redirect',
   });
 
   const handleLoginClick = () => {
